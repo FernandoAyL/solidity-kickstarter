@@ -1,14 +1,25 @@
 import React, { Component } from 'react'
-import { Button, Table } from 'semantic-ui-react'
+import { Button, Table, Message } from 'semantic-ui-react'
 
 import Campaign from '../ethereum/campaign'
 import web3 from '../ethereum/web3'
 
 class RequestRow extends Component {
+  state = {
+    approveLoading: false,
+    approveErrorMessage: ''
+  }
+
   handleApprove = async () => {
+    this.setState({ approveLoading: true, approveErrorMessage: '' })
     const campaign = Campaign(this.props.address)
     const accounts = await web3.eth.getAccounts()
-    await campaign.methods.approveRequest(this.props.id).send({ from: accounts[0] })
+    try {
+      await campaign.methods.approveRequest(this.props.id).send({ from: accounts[0] })
+    } catch (err) {
+      this.setState({ approveErrorMessage: err.message })
+    }
+    this.setState({ approveLoading: false })
   }
 
   handleFinalize = async () => {
@@ -33,7 +44,17 @@ class RequestRow extends Component {
         <Table.Cell>{requestRecipient}</Table.Cell>
         <Table.Cell>{`${requestApprovalsCount}/${this.props.approversCount}`}</Table.Cell>
         <Table.Cell>
-          {requestComplete ? null : (<Button color='green' basic onClick={this.handleApprove}>Approve</Button>)}
+          {requestComplete
+            ? null
+            : (
+              <div>
+                <Button color='green' basic onClick={this.handleApprove} loading={this.state.approveLoading}>
+                  Approve
+                </Button>
+                <Message error hidden={!this.state.approveErrorMessage} header='Error' content={this.state.approveErrorMessage} />
+              </div>
+              )
+          }
         </Table.Cell>
         <Table.Cell>
           {requestComplete ? null : (<Button color='teal' basic onClick={this.handleFinalize}>Finalize</Button>)}
