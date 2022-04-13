@@ -3,11 +3,14 @@ import { Button, Table, Message } from 'semantic-ui-react'
 
 import Campaign from '../ethereum/campaign'
 import web3 from '../ethereum/web3'
+import { Router } from '../routes'
 
 class RequestRow extends Component {
   state = {
     approveLoading: false,
-    approveErrorMessage: ''
+    approveErrorMessage: '',
+    finalizeLoading: false,
+    finalizeErrorMessage: ''
   }
 
   handleApprove = async () => {
@@ -16,6 +19,7 @@ class RequestRow extends Component {
     const accounts = await web3.eth.getAccounts()
     try {
       await campaign.methods.approveRequest(this.props.id).send({ from: accounts[0] })
+      Router.replaceRoute(Router.asPath)
     } catch (err) {
       this.setState({ approveErrorMessage: err.message })
     }
@@ -23,9 +27,16 @@ class RequestRow extends Component {
   }
 
   handleFinalize = async () => {
+    this.setState({ finalizeLoading: true, finalizeErrorMessage: '' })
     const campaign = Campaign(this.props.address)
     const accounts = await web3.eth.getAccounts()
-    await campaign.methods.finalizeRequest(this.props.id).send({ from: accounts[0] })
+    try {
+      await campaign.methods.finalizeRequest(this.props.id).send({ from: accounts[0] })
+      Router.replaceRoute(Router.asPath)
+    } catch (err) {
+      this.setState({ finalizeErrorMessage: err.message })
+    }
+    this.setState({ finalizeLoading: false })
   }
 
   render () {
@@ -57,7 +68,17 @@ class RequestRow extends Component {
           }
         </Table.Cell>
         <Table.Cell>
-          {requestComplete ? null : (<Button color='teal' basic onClick={this.handleFinalize}>Finalize</Button>)}
+          {requestComplete
+            ? null
+            : (
+              <div>
+                <Button color='teal' basic onClick={this.handleFinalize} loading={this.state.finalizeLoading}>
+                  Finalize
+                </Button>
+                <Message error hidden={!this.state.finalizeErrorMessage} header='Error' content={this.state.finalizeErrorMessage} />
+              </div>
+              )
+          }
         </Table.Cell>
 
       </Table.Row>
